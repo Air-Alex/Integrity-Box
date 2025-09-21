@@ -1,9 +1,9 @@
-id=zygisk
-name=Integrity Box 📦
-version=v19
-versionCode=1900
+id=playintegrity
+name=Integrity Bo✗ 📦
+version=v20
+versionCode=20000
 author=𝗠𝗘𝗢𝗪𝗻𝗮 💅 || tg@MeowDump
-description=𝘈𝘭𝘸𝘢𝘺𝘴 𝘤𝘩𝘦𝘤𝘬 𝘱𝘭𝘢𝘺 𝘪𝘯𝘵𝘦𝘨𝘳𝘪𝘵𝘺 𝘧𝘳𝘰𝘮 𝘗𝘭𝘢𝘺𝘚𝘵𝘰𝘳𝘦'𝘴 𝘥𝘦𝘷𝘦𝘭𝘰𝘱𝘦𝘳 𝘰𝘱𝘵𝘪𝘰𝘯𝘴. | Uninstall playstore update & downgrade to v44.0.28-23_0 if you're unable to pass strong integrity
-updateJson=https://raw.githubusercontent.com/MeowDump/MeowDump/refs/heads/main/zygisk/release.json
+description=Update complete ✅  Kindly reboot your device 
+updateJson=https://raw.githubusercontent.com/MeowDump/MeowDump/refs/heads/main/playintegrity/release.json
 support=https://t.me/MeowDump
-banner=https://raw.githubusercontent.com/MeowDump/MeowDump/refs/heads/main/Banner/mona1.png
+banner=https://images.hdqwalls.com/wallpapers/makima-hush-18.jpg

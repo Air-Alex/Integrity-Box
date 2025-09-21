@@ -1,77 +1,22 @@
 #!/system/bin/sh
 
 # Module path and file references
-MCTRL="${0%/*}"
-SHAMIKO_WHITELIST="/data/adb/shamiko/whitelist"
-NOHELLO_DIR="/data/adb/nohello"
-NOHELLO_WHITELIST="$NOHELLO_DIR/whitelist"
 LOG_DIR="/data/adb/Box-Brain/Integrity-Box-Logs"
 LOG="$LOG_DIR/service.log"
+LOG2="$LOG_DIR/lock.log"
+PKG=com.android.vending
 
 # Logger function
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') | $1" | tee -a "$LOG"
 }
 
-# Check for Magisk presence
-is_magisk() {
-    [ -d /data/adb/magisk ] || getprop | grep -q 'magisk'
+# Logger function
+meow() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') | $1" | tee -a "$LOG2"
 }
 
-# Module install path
-export MODPATH="/data/adb/modules/zygisk"
-
-NO_LINEAGE_FLAG="/data/adb/Box-Brain/NoLineageProp"
-
-# Only run if NoLineageProp exists
-if [ -f "$NO_LINEAGE_FLAG" ]; then
-    log "NoLineageProp flag detected. Starting LineageOS prop cleanup."
-
-    # Remove LineageOS props (by @ez-me)
-    log "Deleting LineageOS build props..."
-    resetprop --delete ro.lineage.build.version
-    resetprop --delete ro.lineage.build.version.plat.rev
-    resetprop --delete ro.lineage.build.version.plat.sdk
-    resetprop --delete ro.lineage.device
-    resetprop --delete ro.lineage.display.version
-    resetprop --delete ro.lineage.releasetype
-    resetprop --delete ro.lineage.version
-    resetprop --delete ro.lineagelegal.url
-    log "LineageOS props deleted."
-
-    # Create system.prop from build info
-    TMP_PROP="$MODPATH/tmp.prop"
-    SYSTEM_PROP="$MODPATH/system.prop"
-
-    log "Generating temporary prop file..."
-    getprop | grep "userdebug" > "$TMP_PROP"
-    getprop | grep "test-keys" >> "$TMP_PROP"
-    getprop | grep "lineage_" >> "$TMP_PROP"
-
-    log "Sanitizing temporary prop file..."
-    sed -i 's///g' "$TMP_PROP"
-    sed -i 's/: /=/g' "$TMP_PROP"
-    sed -i 's/userdebug/user/g' "$TMP_PROP"
-    sed -i 's/test-keys/release-keys/g' "$TMP_PROP"
-    sed -i 's/lineage_//g' "$TMP_PROP"
-
-    log "Sorting and creating final system.prop..."
-    sort -u "$TMP_PROP" > "$SYSTEM_PROP"
-    rm -f "$TMP_PROP"
-    log "system.prop created at $SYSTEM_PROP."
-
-    log "Waiting 30 seconds before applying props..."
-    sleep 30
-
-    log "Applying props via resetprop..."
-    resetprop -n --file "$SYSTEM_PROP"
-    log "LineageOS prop cleanup completed successfully ✅"
-else
-    log "NoLineageProp flag not found. Skipping LineageOS prop cleanup."
-fi
-
-#!/bin/sh
-
+# SELinux spoofing
 if [ -f /data/adb/Box-Brain/selinux ]; then
     if command -v setenforce >/dev/null 2>&1; then
         current=$(getenforce)
@@ -82,57 +27,118 @@ if [ -f /data/adb/Box-Brain/selinux ]; then
     fi
 fi
 
+# Update description
 sh /data/adb/Box-Brain/Integrity-Box-Logs/description.sh
 
-# Initial states
-shamiko_prev=""
-nohello_prev=""
+# Module install path
+export MODPATH="/data/adb/modules/playintegrity"
 
-# Loop to monitor toggle state
-while true; do
-  if [ -f /data/adb/Box-Brain/stop ]; then
-#    log "Stop file found. Exiting background loop."
-    rm -rf $SHAMIKO_WHITELIST
-    rm -rf $NOHELLO_WHITELIST
-    break
-  fi
-  
-  if [ ! -e "${MCTRL}/disable" ] && [ ! -e "${MCTRL}/remove" ]; then
-    if is_magisk && [ ! -f /data/adb/Box-Brain/stop ]; then
+NO_LINEAGE_FLAG="/data/adb/Box-Brain/NoLineageProp"
+NODEBUG_FLAG="/data/adb/Box-Brain/nodebug"
+TAG_FLAG="/data/adb/Box-Brain/tag"
 
-      if [ ! -f "$SHAMIKO_WHITELIST" ]; then
-        touch "$SHAMIKO_WHITELIST"
-      fi
+TMP_PROP="$MODPATH/tmp.prop"
+SYSTEM_PROP="$MODPATH/system.prop"
+> "$TMP_PROP" # clear old temp file
 
-      if [ -d "$NOHELLO_DIR" ] && [ ! -f "$NOHELLO_WHITELIST" ]; then
-        touch "$NOHELLO_WHITELIST"
-      fi
+# Build summary of active flags
+FLAGS_ACTIVE=""
+[ -f "$NO_LINEAGE_FLAG" ] && FLAGS_ACTIVE="$FLAGS_ACTIVE NoLineageProp"
+[ -f "$NODEBUG_FLAG" ] && FLAGS_ACTIVE="$FLAGS_ACTIVE nodebug"
+[ -f "$TAG_FLAG" ] && FLAGS_ACTIVE="$FLAGS_ACTIVE tag"
 
-      # Show log if Shamiko just got activated
-      if [ "$shamiko_prev" != "on" ] && [ -f "$SHAMIKO_WHITELIST" ]; then
-        log "Shamiko Whitelist Mode Activated.✅"
-        shamiko_prev="on"
-      fi
+if [ -n "$FLAGS_ACTIVE" ]; then
+    log "Prop sanitization flags active: $FLAGS_ACTIVE"
+    log "Preparing temporary prop file..."
+    getprop | grep "userdebug" >> "$TMP_PROP"
+    getprop | grep "test-keys" >> "$TMP_PROP"
+    getprop | grep "lineage_" >> "$TMP_PROP"
 
-      # Show log if NoHello just got activated
-      if [ "$nohello_prev" != "on" ] && [ -f "$NOHELLO_WHITELIST" ]; then
-        log "NoHello Whitelist Mode Activated.✅"
-        nohello_prev="on"
-      fi
+    # Basic cleanup
+    sed -i 's///g' "$TMP_PROP"
+    sed -i 's/: /=/g' "$TMP_PROP"
+else
+    log "No prop sanitization flags found. Skipping."
+fi
 
+# LineageOS cleanup
+if [ -f "$NO_LINEAGE_FLAG" ]; then
+    log "NoLineageProp flag detected. Deleting LineageOS props..."
+    for prop in \
+        ro.lineage.build.version \
+        ro.lineage.build.version.plat.rev \
+        ro.lineage.build.version.plat.sdk \
+        ro.lineage.device \
+        ro.lineage.display.version \
+        ro.lineage.releasetype \
+        ro.lineage.version \
+        ro.lineagelegal.url; do
+        resetprop --delete "$prop"
+    done
+    sed -i 's/lineage_//g' "$TMP_PROP"
+    log "LineageOS props sanitized."
+fi
+
+# userdebug → user
+if [ -f "$NODEBUG_FLAG" ]; then
+    if grep -q "userdebug" "$TMP_PROP"; then
+        sed -i 's/userdebug/user/g' "$TMP_PROP"
     fi
-  else
-    if [ -f "$SHAMIKO_WHITELIST" ]; then
-      rm -f "$SHAMIKO_WHITELIST"
-      log "Shamiko Blacklist Mode Activated.❌"
-      shamiko_prev="off"
-    fi
+    log "userdebug → user sanitization applied."
+fi
 
-    if [ -f "$NOHELLO_WHITELIST" ]; then
-      rm -f "$NOHELLO_WHITELIST"
-      log "NoHello Blacklist Mode Activated.❌"
-      nohello_prev="off"
+# test-keys → release-keys
+if [ -f "$TAG_FLAG" ]; then
+    if grep -q "test-keys" "$TMP_PROP"; then
+        sed -i 's/test-keys/release-keys/g' "$TMP_PROP"
     fi
-  fi
-  sleep 4
-done &
+    log "test-keys → release-keys sanitization applied."
+fi
+
+# Finalize system.prop
+if [ -s "$TMP_PROP" ]; then
+    log "Sorting and creating final system.prop..."
+    sort -u "$TMP_PROP" > "$SYSTEM_PROP"
+    rm -f "$TMP_PROP"
+    log "system.prop created at $SYSTEM_PROP."
+
+    log "Waiting 30 seconds before applying props..."
+    sleep 30
+
+    log "Applying props via resetprop..."
+    resetprop -n --file "$SYSTEM_PROP"
+    log "Prop sanitization applied from system.prop ✅"
+fi
+
+# Explicit fingerprint sanitization
+if [ -f "$NODEBUG_FLAG" ] || [ -f "$TAG_FLAG" ]; then
+    fp=$(getprop ro.build.fingerprint)
+    fp_clean="$fp"
+
+    [ -f "$NODEBUG_FLAG" ] && fp_clean=${fp_clean/userdebug/user}
+    [ -f "$TAG_FLAG" ] && {
+        fp_clean=${fp_clean/test-keys/release-keys}
+        fp_clean=${fp_clean/dev-keys/release-keys}
+    }
+
+    if [ "$fp" != "$fp_clean" ]; then
+        resetprop ro.build.fingerprint "$fp_clean"
+        [ -f "$NODEBUG_FLAG" ] && resetprop ro.build.type "user"
+        [ -f "$TAG_FLAG" ] && resetprop ro.build.tags "release-keys"
+        log "Fingerprint sanitized → $fp_clean"
+    else
+        log "Fingerprint already clean. No changes applied."
+    fi
+fi
+
+# Disable Play Store update components 
+[ -f /data/adb/Box-Brain/smash ] || exit 0
+
+COMPONENTS=$(pm dump $PKG | grep -iE "self.?update|system.?update" | grep -o "$PKG/[^ ]*" | sort -u)
+
+[ -z "$COMPONENTS" ] && exit 0
+
+for comp in $COMPONENTS; do
+    pm disable "$comp"
+    meow "Disabled all update related components"
+done

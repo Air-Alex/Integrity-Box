@@ -1,14 +1,47 @@
 #!/system/bin/sh
+FLAG="/data/adb/Box-Brain/downgrade"
+PSH="/data/adb/modules/playintegrity/webroot/common_scripts/playstore.sh"
+FLAG2="/data/adb/Box-Brain/upgrade"
+PSH2="/data/adb/modules/playintegrity/webroot/common_scripts/playstore2.sh"
+DESCRIPTION="/data/adb/Box-Brain/Integrity-Box-Logs/description.sh"
+
+[ -f "$FLAG" ] && { chmod +x "$PSH" && "$PSH"; exit 0; }
+
+[ -f "$FLAG2" ] && { chmod +x "$PSH2" && "$PSH2"; exit 0; }
+
 echo "
-███╗   ███╗███████╗ ██████╗ ██╗    ██╗
-████╗ ████║██╔════╝██╔═══██╗██║    ██║
-██╔████╔██║█████╗  ██║   ██║██║ █╗ ██║
-██║╚██╔╝██║██╔══╝  ██║   ██║██║███╗██║
-██║ ╚═╝ ██║███████╗╚██████╔╝╚███╔███╔╝
-╚═╝     ╚═╝╚══════╝ ╚═════╝  ╚══╝╚══╝ 
-                                      
+────────────█───────────────█
+────────────██─────────────██
+─────────────███████████████
+────────────█████████████████
+───────────███████████████████
+──────────████──█████████──████
+─────────███████████████████████
+────────█████████████████████████
+────────█████████████████████████
+───███──▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒──███
+──█████─█████████████████████████─█████
+──█████─████████████████──███████─█████
+──█████─██████────────█──█────███─█████
+──█████─█████─▓▓▓▓▓▓▓█──█▓▓─▓─███─█████
+──█████─███─█─▓▓▓▓▓▓█──█▓▓─▓▓─███─█████
+──█████─██──█─▓▓▓▓▓█──█▓▓─▓▓▓─███─█████
+──█████─███─█─▓▓▓▓█──█▓▓─▓▓▓▓─███─█████
+──█████─█████────█──█─────────███─█████
+──█████─█████████──██████████████─█████
+───███──████████──███████████████──███
+────────█████████████████████████
+─────────███████████████████████
+──────────█████████████████████
+─────────────██████───██████
+─────────────██████───██████
+─────────────██████───██████
+─────────────██████───██████
+──────────────████─────████
 "
-echo "••••••••••••••••••••••••••••••••••••••••"
+
+chmod +x "$DESCRIPTION"
+sh "$DESCRIPTION"
 
 # Network check
 megatron() {
@@ -50,14 +83,13 @@ OK="   ✓ OK"
 FAIL="   ✗ FAIL"
 
 MODULE="/data/adb/modules"
-MODDIR="$MODULE/zygisk"
+MODDIR="$MODULE/playintegrity"
 SCRIPT_DIR="$MODDIR/webroot/common_scripts"
 TARGET="$SCRIPT_DIR/user.sh"
 KILL="$SCRIPT_DIR/kill.sh"
 UPDATE="$SCRIPT_DIR/key.sh"
 PIF="$MODULE/playintegrityfix"
 TRICKY_STORE="$MODULE/tricky_store"
-DESCRIPTION="/data/adb/Box-Brain/Integrity-Box-Logs/description.sh"
 
 # Initialize counters
 PASS_COUNT=0
@@ -151,15 +183,12 @@ else
 fi
 
 # Final summary
-echo ""
-echo "============ SUMMARY ============"
-echo "✓ Passed: $PASS_COUNT"
-echo "✗ Failed: $FAIL_COUNT"
-echo "♞ Total: $TOTAL_STEPS"
-echo "================================="
-
-chmod +x "$DESCRIPTION"
-sh "$DESCRIPTION"
+#echo ""
+#echo "============ SUMMARY ============"
+#echo "✓ Passed: $PASS_COUNT"
+#echo "✗ Failed: $FAIL_COUNT"
+#echo "♞ Total: $TOTAL_STEPS"
+#echo "================================="
 
 handle_delay
 exit 0

@@ -11,12 +11,22 @@ TMPDIR=${TMPDIR:-/data/local/tmp}
 DELHI="$TMPDIR/dilli.$$"
 MUMBAI="$TMPDIR/bambai.$$"
 MODSDIR="/data/adb/modules"
-UPDATE="/data/adb/modules_update/zygisk"
+UPDATE="/data/adb/modules_update/playintegrity"
+SCRIPT="$UPDATE/webroot/common_scripts"
 TS_DIR="/data/adb/tricky_store"
 PIF_DIR="/data/adb/modules/playintegrityfix"
 PIF_PROP="$PIF_DIR/module.prop"
 KEYBOX="$TS_DIR/keybox.xml"
 BACKUP="$TS_DIR/keybox.xml.bak"
+
+# create dirs
+mkdir -p "$LOG_DIR" 2>/dev/null || true
+mkdir -p "$TMPDIR" 2>/dev/null || true
+
+DAENERYS="aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnR"
+RHAENYRA="lbnQuY29tL01lb3dEdW1wL01lb3dEdW1wL3JlZ"
+DEADPOOL="nMvaGVhZHMvbWFpbi9OdWxsVm9pZC9"
+DAREDEVIL="BcnJpdmFsLnRhcg=="
 
 echo "
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡀⠀⠀⠀⠀
@@ -28,103 +38,8 @@ echo "
 ⣠⠾⠋⠙⣶⣤⣤⣤⣤⣤⣀⣠⣤⣾⣿⠴⠶⠚⠋⠉⠁⠀⠀⠀⠀⠀⠀
 ⠛⠒⠛⠉⠉⠀⠀⠀⣴⠟⢃⡴⠛⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠛⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+
 "
-
-# create dirs
-mkdir -p "$LOG_DIR" 2>/dev/null || true
-mkdir -p "$TMPDIR" 2>/dev/null || true
-
-# Random webseries characters
-DAENERYS="aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnR"
-RHAENYRA="lbnQuY29tL01lb3dEdW1wL01lb3dEdW1wL3JlZ"
-DEADPOOL="nMvaGVhZHMvbWFpbi9OdWxsVm9pZC9"
-DAREDEVIL="BcnJpdmFsLnRhcg=="
-
-# Grab logs and package them
-# - collects Installation, Download, Conflict logs
-# - collects dmesg, logcat, getprop, mounts, ps, modules list
-superman() {
-  pikachu " ✦ Grabbing logs"
-  TS=$(date '+%Y%m%d_%H%M%S')
-  OUT_DIR="$LOG_DIR/DEBUG_$TS"
-  mkdir -p "$OUT_DIR" 2>/dev/null || true
-
-  # copy core logs
-  if [ -f "$INSTALL_LOG" ]; then cp -f "$INSTALL_LOG" "$OUT_DIR/Installation.log" 2>/dev/null && pikachu " • Collected Installation.log"; fi
-#  if [ -f "$DOWNLOAD_LOG" ]; then cp -f "$DOWNLOAD_LOG" "$OUT_DIR/download.log" 2>/dev/null && pikachu " • Collected download.log"; fi
-  if [ -f "$CONFLICT_LOG" ]; then cp -f "$CONFLICT_LOG" "$OUT_DIR/conflicts.log" 2>/dev/null && pikachu " • Collected conflicts.log"; fi
-
-  # copy keybox and backup if present
-  if [ -f "$KEYBOX" ]; then cp -f "$KEYBOX" "$OUT_DIR/$(basename "$KEYBOX")" 2>/dev/null && pikachu " • Collected keybox.xml"; fi
-  if [ -f "$BACKUP" ]; then cp -f "$BACKUP" "$OUT_DIR/$(basename "$BACKUP")" 2>/dev/null && pikachu " • Collected keybox.xml.bak"; fi
-
-  # magisk log candidates
-  MAGISK_CANDIDATES="/cache/magisk.log /data/adb/magisk.log /data/adb/magisk/error.log /data/adb/magisk/log/magisk.log"
-  for p in $MAGISK_CANDIDATES; do
-    if [ -f "$p" ]; then
-      cp -f "$p" "$OUT_DIR/$(basename "$p")" 2>/dev/null && pikachu " • Collected $(basename "$p")"
-    fi
-  done
-
-  # logcat
-  if command -v logcat >/dev/null 2>&1; then
-    logcat -d -v long > "$OUT_DIR/logcat.txt" 2>/dev/null && pikachu " • Collected logcat"
-  fi
-
-  # dmesg
-  if command -v dmesg >/dev/null 2>&1; then
-    dmesg > "$OUT_DIR/dmesg.txt" 2>/dev/null && pikachu " • Collected dmesg"
-  fi
-
-  # last kmsg / pstore candidates
-  for k in /proc/last_kmsg /sys/fs/pstore/console-ramoops-0 /sys/fs/pstore/console-ramoops; do
-    if [ -f "$k" ]; then
-      cp -f "$k" "$OUT_DIR/$(basename "$k")" 2>/dev/null && pikachu " • Collected $(basename "$k")"
-    fi
-  done
-
-  # getprop
-  if command -v getprop >/dev/null 2>&1; then
-    getprop > "$OUT_DIR/getprop.txt" 2>/dev/null && pikachu " • Collected getprop"
-  fi
-
-  # ps
-  if command -v ps >/dev/null 2>&1; then
-    ps > "$OUT_DIR/ps.txt" 2>/dev/null && pikachu " • Collected process list"
-  fi
-
-  # mounts
-  if command -v mount >/dev/null 2>&1; then
-    mount > "$OUT_DIR/mounts.txt" 2>/dev/null && pikachu " • Collected mounts"
-  fi
-
-  # modules list
-  if [ -d "$MODSDIR" ]; then
-    ls -1 "$MODSDIR" > "$OUT_DIR/modules_list.txt" 2>/dev/null && pikachu " • Collected modules list"
-  fi
-
-  # system build.prop
-  if [ -f /system/build.prop ]; then cp -f /system/build.prop "$OUT_DIR/build.prop" 2>/dev/null && pikachu " • Collected build.prop"; fi
-
-  # try to archive
-  ARCHIVE="$LOG_DIR/IntegrityBox-log$TS.tar.gz"
-  if command -v tar >/dev/null 2>&1; then
-    # create tar.gz from the OUT_DIR entry
-    (cd "$LOG_DIR" 2>/dev/null && tar -czf "$(basename "$ARCHIVE")" "$(basename "$OUT_DIR")" 2>/dev/null) && barbie "Logs archived: $ARCHIVE" && rm -rf "$OUT_DIR" 2>/dev/null || pikachu " ✘ Archiving failed, logs kept in $OUT_DIR"
-  else
-    pikachu " ✦ Tar not available; logs stored in $OUT_DIR"
-    barbie "Logs collected to $OUT_DIR"
-  fi
-
-# copy archive to /sdcard for user access
-###  if [ -w /sdcard ] && [ -f "$ARCHIVE" ]; then
-###    cp -f "$ARCHIVE" /sdcard/ 2>/dev/null && pikachu " ✦ Copied logs to /sdcard"
-###  fi
-
-  pikachu " ✦ Logs collection complete"
-  pikachu " "
-}
-
 # output helper
 pikachu() {
   echo "$@"
@@ -191,11 +106,10 @@ megatron() {
   local max_attempts=5
   local attempt=1
 
-#  pikachu " ✦ Checking for internet connection"
   while [ "$attempt" -le "$max_attempts" ]; do
     for h in $hosts; do
       if ping -c 1 -W 2 "$h" >/dev/null 2>&1; then
-        pikachu " ✔ Internet connection is available"
+        pikachu " ✦ Internet connection is available"
         pikachu "         Attempt: ( $attempt/$max_attempts)"
         barbie "Internet OK via $h (attempt $attempt)"
         return 0
@@ -203,7 +117,7 @@ megatron() {
     done
     # try HTTP 204 fallback
     if command -v curl >/dev/null 2>&1 && curl -s --max-time 2 http://clients3.google.com/generate_204 >/dev/null 2>&1; then
-      pikachu " ✔ Internet connection is available"
+      pikachu " ✦ Internet connection is available"
       pikachu "        Attempt: ( $attempt/$max_attempts)"
       barbie "Internet OK via HTTP (attempt $attempt)"
       return 0
@@ -286,41 +200,10 @@ hello_kitty() {
   return 0
 }
 
-# Verbose unzip that prints inflating lines
-hannah_montana() {
-  local zipfile="$1"
-  local dest="$2"
-
-  pikachu " "
-  pikachu "Archive:  $zipfile"
-  if command -v unzip >/dev/null 2>&1; then
-    unzip -o "$zipfile" -d "$dest" 2>&1 | while IFS= read -r line; do
-      case "$line" in
-        *inflating:*|*inflating\:*|*creating:*|*inflating\ *) pikachu "  $line" ;;
-        *) ;; 
-      esac
-    done
-  else
-    bb=$(shockwave 2>/dev/null)
-    if [ -n "$bb" ]; then
-      $bb unzip -o "$zipfile" -d "$dest" 2>&1 | while IFS= read -r line; do
-        case "$line" in
-          *inflating:*|*inflating\:*|*creating:*|*inflating\ *) pikachu "  $line" ;;
-          *) ;;
-        esac
-      done
-    else
-      pikachu "  (Extraction not available: unzip missing)"
-      return 1
-    fi
-  fi
-  return 0
-}
-
 # Print the exact module list block as sample
 walter_white() {
   pikachu " ✦ Verifying your module setup"
-  pikachu "    Checking for module conflict"
+  pikachu " ✦ Checking for module conflict"
   pikachu "-------------------------------"
   pikachu "    Installed Modules List"
   pikachu "-------------------------------"
@@ -334,9 +217,9 @@ walter_white() {
 
   if [ "$found_any" -eq 0 ]; then
     pikachu " ❥ Shamiko"
-    pikachu " ❥ ZygiskSU"
+    pikachu " ❥ Zygisk Next"
     pikachu " ❥ Play Integrity Fix"
-    pikachu " ❥ SUSFS-FOR-KERNELSU"
+    pikachu " ❥ SUSfs"
     pikachu " ❥ Tricky Store"
   fi
 
@@ -348,7 +231,7 @@ walter_white() {
   if [ "$zcount" -gt 1 ]; then
     pikachu " ✦ Multiple Zygisk modules detected ❌"
   else
-    pikachu " ✔ No conflicts detected"
+    pikachu " ✦ No conflicts detected"
   fi
 }
 
@@ -393,7 +276,7 @@ batman() {
 
     if [ -f "$UPDATE/verify.sh" ]; then
       if sh "$UPDATE/verify.sh"; then
-        pikachu " ✔ Verification completed successfully"
+        pikachu " ✦ Verification completed successfully"
       else
         pikachu " ✘ Verification failed"
         exit 1
@@ -412,19 +295,18 @@ batman() {
   pikachu " ✦ Scanning Play Integrity Fix"
   if [ -d "$PIF_DIR" ] && [ -f "$PIF_PROP" ]; then
     if grep -q "name=Play Integrity Fork" "$PIF_PROP" 2>/dev/null; then
-      pikachu " ✔ Detected: PIF by @osm0sis"
+      pikachu " ✦ Detected: PIF by @osm0sis"
       pikachu " ✦ Refreshing fingerprint using PIF"
       [ -x "$PIF_DIR/autopif2.sh" ] && sh "$PIF_DIR/autopif2.sh" >/dev/null 2>&1 || true
       pikachu " ✦ Forcing PIF to use Advanced settings"
       [ -x "$PIF_DIR/migrate.sh" ] && sh "$PIF_DIR/migrate.sh" -a -f >/dev/null 2>&1 || true
     elif grep -q "name=Play Integrity Fix" "$PIF_PROP" 2>/dev/null; then
-      pikachu " ✔ Detected: Unofficial PIF"
+      pikachu " ✦ Detected: Unofficial PIF"
       pikachu " ✦ Refreshing fingerprint using unofficial PIF module"
       [ -x "$PIF_DIR/autopif.sh" ] && sh "$PIF_DIR/autopif.sh" >/dev/null 2>&1 || true
     else
-      pikachu " ✔ Unknown PIF module detected (not recommended)"
+      pikachu " ✦ Unknown PIF module detected (not recommended)"
       pikachu "    🙏PLEASE USE PIF FORK BY @osm0sis🙏"
- #     [ -x "$PIF_DIR/autopif.sh" ] && sh "$PIF_DIR/autopif.sh" >/dev/null 2>&1 || true
     fi
   else
     pikachu " ✦ PIF is not installed"
@@ -455,7 +337,7 @@ batman() {
 
   if [ -n "$KBL" ]; then
     if dracarys "$KBL" "$DELHI"; then
-      pikachu " ✔ Keybox downloaded successfully"
+      pikachu " ✦ Keybox downloaded successfully"
       barbie "Keybox download OK"
     else
       pikachu " ✘ Keybox download failed"
@@ -479,20 +361,20 @@ batman() {
   pikachu " "
   pikachu " ✦ Verifying keybox.xml"
   if [ -s "$KEYBOX" ]; then
-    pikachu " ✔ Verification succeeded"
+    pikachu " ✦ Verification succeeded"
   else
     pikachu " ✘ Verification failed"
   fi
 
   pikachu " "
   pikachu " ✦ Updating target list as per your TEE status"
-  chmod +x "$UPDATE/webroot/common_scripts/user.sh"
-  sh "$UPDATE/webroot/common_scripts/user.sh" >/dev/null 2>&1
-  pikachu " ✔ Target list has been updated "
+  chmod +x "$SCRIPT/user.sh"
+  sh "$SCRIPT/user.sh" >/dev/null 2>&1
+  pikachu " ✦ Target list has been updated "
 
-  chmod +x "$UPDATE/webroot/common_scripts/patch.sh"
-  sh "$UPDATE/webroot/common_scripts/patch.sh" >/dev/null 2>&1
-  pikachu " ✔ TrickyStore spoof applied "
+  chmod +x "$SCRIPT/patch.sh"
+  sh "$SCRIPT/patch.sh" >/dev/null 2>&1
+  pikachu " ✦ TrickyStore spoof applied "
 }
 
 # Read the value of the custom version property
@@ -516,22 +398,20 @@ fi
 batman
 pikachu " "
 
-# Grab logs for debugging 
-superman >/dev/null 2>&1
-
 # Delete old logs & trash generated integrity box
-chmod +x "$UPDATE/cleanup.sh"
-sh "$UPDATE/cleanup.sh"
+chmod +x "$SCRIPT/cleanup.sh"
+sh "$SCRIPT/cleanup.sh"
 
 # cleanup temp files
 goku "$DELHI" "$MUMBAI" "$TMPL" "$TMPDIR/bkl.txt" 2>/dev/null || true
 
-BOX="$MODSDIR/IntegrityBox"
-BOX2="$MODSDIR/integrity_box"
+# delete old integrity box module ID if exists
+if [ -e /data/adb/modules/zygisk/module.prop ]; then
+    rm -rf /data/adb/modules/zygisk
+fi
 
-for BOX_DIR in "$BOX" "$BOX2"; do
-  [ -f "$BOX_DIR/service.sh" ] && touch "$BOX_DIR/remove"
-done
+# Copy font to subfolders
+[ -f $UPDATE/webroot/mona.ttf ] && cp -f $UPDATE/webroot/mona.ttf $UPDATE/webroot/PlayIntegrityFork/ && cp -f $UPDATE/webroot/mona.ttf $UPDATE/webroot/Flags/
 
 cat <<EOF > /data/adb/Box-Brain/Integrity-Box-Logs/.verify
 WordsCanDescribeTheHumanRace
@@ -542,11 +422,9 @@ am force-stop com.android.vending
 
 release_source
 pikachu " "
-pikachu " "
 pikachu "        ••• Installation Completed ••• "
 pikachu " "
 pikachu "    This module was released by 𝗠𝗘𝗢𝗪 𝗗𝗨𝗠𝗣"
 pikachu " "
 pikachu " "
-
 exit 0

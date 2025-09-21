@@ -28,8 +28,8 @@ if [ -e /data/adb/service.d/debug.sh ]; then
     rm -rf /data/adb/service.d/debug.sh
 fi
 
-if [ -e /data/adb/modules/zygisk ]; then
-    rm -rf /data/adb/modules/zygisk
+if [ -e /data/adb/modules/playintegrity ]; then
+    rm -rf /data/adb/modules/playintegrity
 fi
 
 if [ -e "$TARGET_BACKUP" ]; then
