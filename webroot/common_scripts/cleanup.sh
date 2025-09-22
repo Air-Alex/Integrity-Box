@@ -120,7 +120,8 @@ mv "$T" "$F"
 	delete_if_exist /data/adb/modules/IntegrityBox
 	delete_if_exist /data/adb/modules/zygisk
 	delete_if_exist /data/adb/service.d/debug.sh
-	
+	delete_if_exist /data/adb/Box-Brain/Integrity-Box-Logs/description.sh
+	delete_if_exist /data/adb/modules/playintegrity/tmp.prop
 
     echo "••••••• Cleanup Ended •••••••"
     echo ""

@@ -119,7 +119,7 @@ fi
 echo "$NOW" > "$TFILE"
 
 y "/data/adb/modules/playintegrity/webroot/style.css"
-y "/data/adb/modules/playintegrity/webroot/Flags/mona.ttf"
+y "/data/adb/modules/playintegrity/webroot/Flags/index.html"
 y "/data/adb/Box-Brain/Integrity-Box-Logs/Installation.log"
 
 R || { _ "FAIL_NET"; _ "Download failed"; exit 1; }
