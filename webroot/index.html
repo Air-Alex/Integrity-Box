@@ -20,7 +20,7 @@
     <header class="title-bar">
       <div>
         <div id="module-name" class="title">Integrity-Box</div>
-        <div class="subtitle">ɢᴏᴅ ɢᴜɪᴅᴇꜱ ᴛʜᴇ ɢʀᴀᴛᴇꜰᴜʟ</div>
+        <div class="subtitle">    ɢᴏᴅ ɢᴜɪᴅᴇꜱ ᴛʜᴇ ɢʀᴀᴛᴇꜰᴜʟ</div>
       </div>
       <label class="theme-switch">
         <input type="checkbox" id="theme-toggle" checked />
@@ -30,10 +30,10 @@
 
     <div class="dashboard">
       <div class="status-item">Whitelist: <span id="status-whitelist" class="status-indicator loading">...</span></div>
-      <div class="status-item">GMS Spoofing: <span id="status-gms" class="status-indicator loading">...</span></div>
+      <div class="status-item">Spoofing: <span id="status-gms" class="status-indicator loading">...</span></div>
       <div class="status-item" style="display: flex; align-items: center; gap: 12px;">
-        SusFS: <span id="status-susfs" class="status-indicator loading">...</span>
-        <span style="margin-left: 12px;">🌐:</span>
+        Lineage: <span id="status-LineageProp" class="status-indicator loading">...</span>
+        <span style="margin-left: 0px;"></span>
         <select id="lang-dropdown">
           <option value="en">🇬🇧 English</option>
           <option value="id">🇮🇩 Indonesian</option>
@@ -64,29 +64,32 @@
     </div>
 
     <main>
+            <div class="button-group">
+        <h3 class="group-title">Miscellaneous</h3>
+        <div class="button-grid">
+          <button class="btn" data-script="mona" data-type="flags"><span class="icon material-symbols-outlined">bolt</span>Module Settings<div class="spinner"></div></button>
+          <button class="btn" data-script="boot_hash.sh" data-type="hash"><span class="icon material-symbols-outlined">tag</span>Fix Abnormal Boot Hash<div class="spinner"></div></button>
+          <button class="btn" data-script="app.sh" data-type="scanner"><span class="icon material-symbols-outlined">microbiology</span>Scan Flagged Apps <div class="spinner"></div></button>
+          <button class="btn" data-script="resetprop.sh"><span class="icon material-symbols-outlined">hide</span>Hide PIF Hook Detection<div class="spinner"></div></button>
+        </div>
+      </div>
+
       <div class="button-group">
         <h3 class="group-title">Play Integrity Fix</h3>
         <div class="button-grid">
           <button class="btn" data-script="piffork.sh" data-type="piffork"><span class="icon material-symbols-outlined">wand_stars</span>PIF Fork Settings <div class="spinner"></div></button>
-          <button class="btn" data-script="spoof.sh"><span class="icon material-symbols-outlined">wand_stars</span>PIF Inject Settings <div class="spinner"></div></button>
+          <button class="btn" data-script="kill.sh"><span class="icon material-symbols-outlined">swords</span>Kill GMS Process <div class="spinner"></div></button>
           <button class="btn" data-script="pif.sh"><span class="icon material-symbols-outlined">science</span>Set Custom Fingerprint <div class="spinner"></div></button>
+          <button class="btn" data-script="vending.sh" onclick="ksu.exec('su -c pm clear com.android.vending; su -c pm clear com.google.android.gms')"><span class="icon material-symbols-outlined">build_circle</span>FIX Device not Certified <div class="spinner"></div></button>
         </div>
       </div>
 
       <div class="button-group">
         <h3 class="group-title">Tricky Store</h3>
         <div class="button-grid">
-          <button class="btn" data-script="key.sh"><span class="icon material-symbols-outlined">deployed_code_update</span>Update Keybox <div class="spinner"></div></button>
+          <button class="btn" data-script="key.sh" data-type="scanner"><span class="icon material-symbols-outlined">deployed_code_update</span>Update Keybox<div class="spinner"></div></button>
           <button class="btn" data-script="user.sh" data-type="scanner"><span class="icon material-symbols-outlined">android</span>Update Target List<div class="spinner"></div></button>
           <button class="btn" data-script="patch.sh"><span class="icon material-symbols-outlined">security</span>Spoof Boot Patch Level <div class="spinner"></div></button>
-        </div>
-      </div>
-
-      <div class="button-group">
-        <h3 class="group-title">SusFS</h3>
-        <div class="button-grid">
-          <button class="btn" data-script="sus.sh"><span class="icon material-symbols-outlined">terminal</span>Update Sus Path <div class="spinner"></div></button>
-          <button class="btn" data-script="boot_hash.sh" data-type="hash"><span class="icon material-symbols-outlined">tag</span>Abnormal Boot Hash Fixer<div class="spinner"></div></button>
         </div>
       </div>
 
@@ -95,17 +98,6 @@
         <div class="button-grid">
           <button class="btn" data-script="start.sh" onclick="ksu.exec('[ -d /data/adb/shamiko ] && touch /data/adb/shamiko/whitelist || [ -d /data/adb/nohello ] && touch /data/adb/nohello/whitelist')"><span class="icon material-symbols-outlined">toggle_on</span>Enable Whitelist Mode <div class="spinner"></div></button>
           <button class="btn" data-script="stop.sh" onclick="ksu.exec('rm -rf /data/adb/shamiko/whitelist /data/adb/nohello/whitelist')"><span class="icon material-symbols-outlined">toggle_off</span>Disable Whitelist Mode <div class="spinner"></div></button>
-        </div>
-      </div>
-
-      <div class="button-group">
-        <h3 class="group-title">Miscellaneous</h3>
-        <div class="button-grid">
-          <button class="btn" data-script="mona" data-type="flags"><span class="icon material-symbols-outlined">bolt</span>Module Settings<div class="spinner"></div></button>
-          <button class="btn" data-script="vending.sh" onclick="ksu.exec('su -c pm clear com.android.vending; su -c pm clear com.google.android.gms')"><span class="icon material-symbols-outlined">build_circle</span>FIX Device not Certified <div class="spinner"></div></button>
-          <button class="btn" data-script="kill.sh"><span class="icon material-symbols-outlined">swords</span>Kill GMS Process <div class="spinner"></div></button>
-          <button class="btn" data-script="app.sh" data-type="scanner"><span class="icon material-symbols-outlined">microbiology</span>Scan Flagged Apps <div class="spinner"></div></button>
-          <button class="btn" data-script="resetprop.sh"><span class="icon material-symbols-outlined">hide</span>Hide PIF Hook Detection<div class="spinner"></div></button>
         </div>
       </div>
 

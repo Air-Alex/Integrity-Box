@@ -120,7 +120,7 @@ async function getModuleName() {
 async function updateDashboard() {
   const statusWhitelist = document.getElementById("status-whitelist");
   const statusGms = document.getElementById("status-gms");
-  const statusSusfs = document.getElementById("status-susfs");
+  const statusLineageProp = document.getElementById("status-LineageProp");
   try {
     await runShell("[ -f /data/adb/nohello/whitelist ] || [ -f /data/adb/shamiko/whitelist ]");
     if (statusWhitelist) { statusWhitelist.textContent = "Enabled"; statusWhitelist.className = "status-indicator enabled"; }
@@ -135,10 +135,23 @@ async function updateDashboard() {
     if (statusGms) { statusGms.textContent = "Unknown"; statusGms.className = "status-indicator"; }
   }
   try {
-    await runShell("[ -d /data/adb/modules/susfs4ksu ]");
-    if (statusSusfs) { statusSusfs.textContent = "Detected"; statusSusfs.className = "status-indicator enabled"; }
+    let result = await runShell("getprop | grep -i lineage");
+    if (result && result.trim() !== "") {
+      if (statusLineageProp) { 
+        statusLineageProp.textContent = "N/A"; 
+        statusLineageProp.className = "status-indicator disabled"; 
+      }
+    } else {
+      if (statusLineageProp) { 
+        statusLineageProp.textContent = "Detected"; 
+        statusLineageProp.className = "status-indicator enabled"; 
+      }
+    }
   } catch {
-    if (statusSusfs) { statusSusfs.textContent = "N/A"; statusSusfs.className = "status-indicator disabled"; }
+    if (statusLineageProp) { 
+      statusLineageProp.textContent = "Spoofed"; 
+      statusLineageProp.className = "status-indicator enabled"; 
+    }
   }
 }
 
@@ -238,7 +251,6 @@ async function changeLanguage(lang) {
 const SCRIPT_POPUPS = {
   "kill.sh": { success: "Process Killed Successfully", type: "info" },
   "user.sh": { success: "I've added all user apps", type: "info" },
-  "sus.sh": { start: " ", success: "Make it SUS🥷", type: "info" },
   "stop.sh": { success: "Switched to Blacklist Mode", type: "info" },
   "start.sh": { success: "Switched to Whitelist Mode", type: "info" },
   "spoof.sh": { success: "Applied", type: "info" },
@@ -249,7 +261,7 @@ const SCRIPT_POPUPS = {
   "key.sh": { success: "Keybox has been updated✅", type: "info" },
   "app.sh": { start: " ", success: "Detection Complete", type: "info" },
   "support": { start: "Become a Supporter", type: "info" },
-  "boot_hash.sh": { success: "Boot hash operation complete", type: "success" }
+  "boot_hash.sh": { start: "Paste your boot hash buddy", success: "Boot hash operation complete", type: "success" }
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -285,29 +297,35 @@ document.addEventListener("DOMContentLoaded", async () => {
           } finally {
           }
         } else if (type === "hash") {
-          const output = await runShell(`sh ${MODDIR}/boot_hash.sh get`).catch(()=>"");
-          const lines = (output || "").trim().split(/\r?\n/);
-          const saved = (lines[1] || "").trim();
-          const content = `<div style="display:flex;flex-direction:column;gap:1rem"><label>Copy your Verified Boot Hash from key attestation or native detector app and</label><label>Paste it here:</label><input id="new-hash" type="text" value="${saved}" placeholder="abcdef1234..." style="width:100%;padding:0.5rem;font-size:0.9rem;border-radius:8px;border:1px solid var(--border-color);background:var(--panel-bg);color:var(--fg);" /><div style="display:flex;gap:1rem;flex-wrap:wrap;"><button class="btn" id="apply-hash"><span class="icon material-symbols-outlined">done</span>Apply</button><button class="btn" id="reset-hash"><span class="icon material-symbols-outlined">restart_alt</span>Reset</button></div></div>`;
+          const content = `<div style="display:flex;flex-direction:column;gap:1rem">
+            <label>Copy your Verified Boot Hash from key attestation or native detector app and</label>
+            <label>Paste it here:</label>
+            <input id="new-hash" type="text" placeholder="abcdef1234..." style="width:100%;padding:0.5rem;font-size:0.9rem;border-radius:8px;border:1px solid var(--border-color);background:var(--panel-bg);color:var(--fg);" />
+            <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+              <button class="btn" id="apply-hash"><span class="icon material-symbols-outlined">done</span>Apply</button>
+              <button class="btn" id="reset-hash"><span class="icon material-symbols-outlined">restart_alt</span>Reset</button>
+            </div>
+          </div>`;
           openModal("Set Verified Boot Hash", content, true);
           setTimeout(() => {
             document.getElementById("apply-hash")?.addEventListener("click", async () => {
               const hash = (document.getElementById("new-hash")?.value || "").trim();
-              const cmd = hash ? `sh ${MODDIR}/boot_hash.sh set ${hash}` : `sh ${MODDIR}/boot_hash.sh clear`;
+              if (!hash) {
+                popup("Please enter a hash ❌", "error");
+                return;
+              }
               try {
-                await runShell(cmd);
+                await runShell(`echo "${hash}" > /data/adb/Box-Brain/hash.txt`);
                 popup("Boot hash applied ✅", "success");
               } catch {
-                popup("SusFS dir not found ❌", "error");
+                popup("Failed to write hash ❌", "error");
               } finally {
-                await runShell(`sh ${MODDIR}/resethash.sh clear`).catch(()=>{});
                 closeModal();
               }
             });
             document.getElementById("reset-hash")?.addEventListener("click", async () => {
-              modalOutput.innerHTML = "Resetting...";
               try {
-                await runShell(`sh ${MODDIR}/boot_hash.sh clear`);
+                await runShell(`rm -f /data/adb/Box-Brain/hash.txt`);
                 popup("Boot hash reset ✅", "success");
               } catch {
                 popup("Failed to reset ❌", "error");
