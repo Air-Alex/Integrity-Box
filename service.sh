@@ -1,19 +1,20 @@
 #!/system/bin/sh
-
 # Module path and file references
 LOG_DIR="/data/adb/Box-Brain/Integrity-Box-Logs"
+PROP="/data/adb/modules/playintegrity/system.prop"
+LINE="ro.crypto.state=encrypted"
+PIF="$MODULE/playintegrityfix"
 LOG="$LOG_DIR/service.log"
-LOG2="$LOG_DIR/lock.log"
-PKG=com.android.vending
+LOG2="$LOG_DIR/encrypt.log"
+LOG3="$LOGDIR/autopif.log"
+LOG4="$LOG_DIR/twrp.log"
+
+# Log folder
+mkdir -p "$LOGDIR"
 
 # Logger function
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') | $1" | tee -a "$LOG"
-}
-
-# Logger function
-meow() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') | $1" | tee -a "$LOG2"
 }
 
 # SELinux spoofing
@@ -27,6 +28,7 @@ if [ -f /data/adb/Box-Brain/selinux ]; then
     fi
 fi
 
+sleep 69
 # Update description
 sh /data/adb/Box-Brain/Integrity-Box-Logs/description.sh
 
@@ -107,7 +109,7 @@ if [ -s "$TMP_PROP" ]; then
 
     log "Applying props via resetprop..."
     resetprop -n --file "$SYSTEM_PROP"
-    log "Prop sanitization applied from system.prop ✅"
+    log "Prop sanitization applied from system.prop"
 fi
 
 # Explicit fingerprint sanitization
@@ -132,17 +134,77 @@ if [ -f "$NODEBUG_FLAG" ] || [ -f "$TAG_FLAG" ]; then
 fi
 
 if [ -e "/data/adb/Box-Brain/target" ]; then
+    sleep 69
     /data/adb/modules/playintegrity/webroot/common_scripts/user.sh
 fi
 
-# Disable Play Store update components 
-[ -f /data/adb/Box-Brain/smash ] || exit 0
+# Spoof Encryption 
+{
+  echo "ENCRYPT CHECK ($(date))"
 
-COMPONENTS=$(pm dump $PKG | grep -iE "self.?update|system.?update" | grep -o "$PKG/[^ ]*" | sort -u)
+  if [ -f /data/adb/Box-Brain/encrypt ]; then
+    if grep -qxF "$LINE" "$PROP"; then
+      echo "Line already exists, no action needed"
+    else
+      echo "$LINE" >> "$PROP"
+      echo "Added line: $LINE"
+    fi
+  else
+    if grep -qxF "$LINE" "$PROP"; then
+      sed -i "\|^$LINE\$|d" "$PROP"
+      echo "Removed line: $LINE"
+    else
+      echo "Line not present, no action needed"
+    fi
+  fi
 
-[ -z "$COMPONENTS" ] && exit 0
+  echo
+} >> "$LOG2" 2>&1
 
-for comp in $COMPONENTS; do
-    pm disable "$comp"
-    meow "Disabled all update related components"
-done
+# Rename twrp folder to avoid root detection
+{
+  echo "TWRP RENAME ($(date))"
+
+  if [ -f /data/adb/Box-Brain/twrp ] && [ -d /sdcard/TWRP ]; then
+    if [ -z "$(ls -A /sdcard/TWRP)" ]; then
+      rm -rf /sdcard/TWRP
+      echo "Deleted empty /sdcard/TWRP"
+    else
+      TARGET="/sdcard/renamed-recovery-folder-$(date +%Y%m%d-%H%M%S)"
+      mv /sdcard/TWRP "$TARGET"
+      echo "Renamed non-empty /sdcard/TWRP → $TARGET"
+    fi
+  else
+    echo "Marker missing or /sdcard/TWRP not found ❌"
+  fi
+  echo
+} >> "$LOG4" 2>&1
+
+# Download PIF fingerprint on boot (will fail automatically wen no internet xD)
+{
+  echo "AUTO PIF EXECUTION"
+  echo "Timestamp: $(date)"
+  echo "Checking prerequisite: /data/adb/Box-Brain/pif"
+
+  if [ -f /data/adb/Box-Brain/pif ]; then
+    echo "detected PIF on boot"
+    sleep 69
+
+    if [ -f "$PIF/autopif2.sh" ]; then
+      echo "Executing autopif2.sh..."
+      sh "$PIF/autopif2.sh"
+      echo "autopif2.sh finished"
+    elif [ -f "$PIF/autopif.sh" ]; then
+      echo "Executing autopif.sh..."
+      sh "$PIF/autopif.sh"
+      echo "autopif.sh finished"
+    else
+      echo "No autopif2.sh or autopif.sh found ❌"
+    fi
+  else
+    echo "Hide TWRP toggle is disabled"
+  fi
+
+  echo "========================================"
+  echo " "
+} >> "$LOG3" 2>&1
