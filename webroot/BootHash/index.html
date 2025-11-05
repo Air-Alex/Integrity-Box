@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verified Boot Hash</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+<style>
+:root {
+  --bg: #1f2233;
+  --fg: #e6e6e6;
+  --accent: #1592FF;
+  --panel-bg: #232637D9;
+  --btn-hover: #2d3240F2;
+  --border-color: #ffffff14;
+  --card-bg: #232637E6;
+  --card-border: #ffffff0D;
+  --shadow-color: #00000066;
+  --border-radius: 16px;
+  --glow-color: #1592FF;
+  --transition-speed: 0.3s;
+}
+
+body {
+  margin:0;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:linear-gradient(135deg,#1f2233,#14172b);
+  color:var(--fg);
+  overflow:hidden;
+}
+
+.container {
+  width:70%;
+  max-width:300px;
+  background:var(--panel-bg);
+  border-radius:var(--border-radius);
+  border:1px solid var(--card-border);
+  box-shadow:0 8px 40px var(--shadow-color);
+  padding:1.5rem;
+  display:flex;
+  flex-direction:column;
+  gap:1rem;
+  position:relative;
+  overflow:hidden;
+  animation:floatUp 0.8s ease;
+}
+.container::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at center,var(--glow-color) 0%,transparent 70%);
+  opacity:0.12;
+  filter:blur(15px);
+  animation:glowPulse 10s infinite;
+  pointer-events:none;
+}
+
+@keyframes floatUp {
+  0%{opacity:0;transform:translateY(20px) scale(0.95);}
+  100%{opacity:1;transform:translateY(0) scale(1);}
+}
+@keyframes glowPulse {
+  0%,100%{opacity:0.12;transform:scale(1);}
+  50%{opacity:0.25;transform:scale(1.1);}
+}
+
+h1 {
+  font-size:1.5rem;
+  text-align:center;
+  color:var(--accent);
+  margin:0;
+  animation:textGlow 2s infinite alternate;
+}
+@keyframes textGlow {
+  from { text-shadow:0 0 4px var(--accent); }
+  to { text-shadow:0 0 12px var(--accent); }
+}
+
+label {
+  font-size:0.85rem;
+  opacity:0.9;
+}
+
+input {
+  width:100%;
+  padding:0.5rem;
+  border-radius:12px;
+  border:1px solid var(--border-color);
+  background:var(--card-bg);
+  color:var(--fg);
+  outline:none;
+  transition:all 0.25s ease;
+}
+input:focus {
+  border-color:var(--accent);
+  box-shadow:0 0 12px var(--accent);
+  transform:scale(1.02);
+}
+
+.buttons {
+  display:flex;
+  gap:0.8rem;
+  flex-wrap:wrap;
+}
+
+.btn {
+  flex:1;
+  padding:0.6rem;
+  background:var(--card-bg);
+  border:1px solid var(--card-border);
+  border-radius:var(--border-radius);
+  color:var(--fg);
+  font-weight:600;
+  cursor:pointer;
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:0.4rem;
+  transition:all var(--transition-speed);
+}
+.btn:hover {
+  background:var(--btn-hover);
+  transform:translateY(-2px) scale(1.03);
+  box-shadow:0 8px 28px var(--shadow-color);
+}
+.btn:active {
+  transform:scale(0.96);
+  opacity:0.9;
+}
+.btn::after {
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background:radial-gradient(circle at center,var(--glow-color) 0%,transparent 60%);
+  opacity:0.15;
+  filter:blur(6px);
+  animation:btnGlow 6s infinite;
+  pointer-events:none;
+}
+@keyframes btnGlow {
+  0%,100%{opacity:0.15;transform:scale(1);}
+  50%{opacity:0.3;transform:scale(1.1);}
+}
+
+.icon {
+  font-size:1.2rem;
+  color:var(--accent);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  animation:iconGlow 2s infinite alternate;
+}
+@keyframes iconGlow {
+  from{opacity:0.6;}
+  to{opacity:1;filter:drop-shadow(0 0 6px var(--accent));}
+}
+
+#toast {
+  position:fixed;
+  bottom:25px;
+  left:50%;
+  transform:translateX(-50%);
+  background:var(--panel-bg);
+  border:1px solid var(--card-border);
+  color:var(--fg);
+  padding:10px 16px;
+  border-radius:12px;
+  box-shadow:0 4px 20px var(--shadow-color);
+  opacity:0;
+  transition:opacity 0.4s, transform 0.4s;
+  z-index:1000;
+  font-size:0.85rem;
+}
+#toast.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(-10px);
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Verified Boot Hash</h1>
+  <label>Paste your hash:</label>
+  <input id="new-hash" type="text" placeholder="abcdef1234...">
+  <div class="buttons">
+    <button class="btn" id="apply-hash"><span class="icon material-symbols-outlined">done</span>Apply</button>
+    <button class="btn" id="reset-hash"><span class="icon material-symbols-outlined">restart_alt</span>Reset</button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+function popup(text,type){
+  const toast=document.getElementById("toast");
+  toast.textContent=text;
+  toast.style.borderColor=type==="success"?"limegreen":"#ff4c4c";
+  toast.classList.add("show");
+  setTimeout(()=>toast.classList.remove("show"),3000);
+}
+
+async function runShell(cmd){
+  if(typeof ksu==="object" && typeof ksu.exec==="function") return await ksu.exec(cmd);
+  console.log("Shell:",cmd);
+  return Promise.resolve();
+}
+
+document.getElementById("apply-hash")?.addEventListener("click",async()=>{
+  const hash=(document.getElementById("new-hash")?.value||"").trim();
+  if(!hash){popup("Enter hash","error");return;}
+  try{
+    await runShell(`echo "${hash}" > /data/adb/Box-Brain/hash.txt`);
+    popup("Boot hash applied","success");
+  }catch{
+    popup("Failed to write hash","error");
+  }
+});
+
+document.getElementById("reset-hash")?.addEventListener("click",async()=>{
+  try{
+    await runShell(`rm -f /data/adb/Box-Brain/hash.txt`);
+    popup("Boot hash reset","success");
+  }catch{
+    popup("Failed to reset","error");
+  }
+});
+</script>
+</body>
+</html>
