@@ -3,7 +3,6 @@ MODPATH="${0%/*}"
 . $MODPATH/common_func.sh
 
 boot="/data/adb/service.d"
-toolbox="/data/adb/modules/playintegrity/toolbox"
 placeholder="/data/adb/modules/playintegrity/webroot/common_scripts"
 PLAYSTORE="/data/adb/Box-Brain/playstore"
 mkdir -p "$boot"
@@ -27,7 +26,7 @@ touch "$placeholder/app.sh"
 touch "$placeholder/user.sh"
 touch "$placeholder/patch.sh"
 touch "$placeholder/pif.sh"
-touch "$placeholder/resetprop.sh"
+#touch "$placeholder/resetprop.sh"
 touch "$placeholder/kill.sh"
 touch "$placeholder/report"
 touch "$placeholder/start"
@@ -38,6 +37,24 @@ if [ -f "/data/adb/Box-Brain/gms" ]; then
     set_resetprop persist.sys.pihooks.disable.gms_props true
     set_simpleprop persist.sys.pihooks.disable 1
     set_simpleprop persist.sys.kihooks.disable 1
+fi
+
+rm -rf "$placeholder/resetprop.sh"
+if [ ! -f "$placeholder/resetprop.sh" ]; then
+  cat <<'EOF' > "$placeholder/resetprop.sh"
+#!/system/bin/sh
+PKG="com.reveny.nativecheck"
+
+su -c 'getprop | grep -E "pphooks|pihook|pixelprops|gms|pi" | sed -E "s/^\[(.*)\]:.*/\1/" | while IFS= read -r prop; do resetprop -p -d "$prop"; done'
+
+# Check if package exists
+if pm list packages | grep -q "$PKG"; then
+    echo "Package $PKG found. Force stopping..."
+    am force-stop "$PKG"
+else
+    echo "$PKG not installed."
+fi
+EOF
 fi
 
 if [ ! -f "$placeholder/override_lineage.sh" ]; then
@@ -129,7 +146,143 @@ EOF
 fi
 
 chmod 755 "$placeholder/override_lineage.sh"
-  
+
+if [ ! -f "$boot/lineage.sh" ]; then
+  cat <<'EOF' > "$boot/lineage.sh"
+#!/system/bin/sh
+
+# Abort the script & delete flags web safe mode is active 
+if [ -f "/data/adb/Box-Brain/safemode" ]; then
+    echo "$(date '+%Y-%m-%d %H:%M:%S') : Safemode active, script aborted." >> "/data/adb/Box-Brain/Integrity-Box-Logs/safemode.log"
+    rm -rf "/data/adb/Box-Brain/NoLineageProp"
+    rm -rf "/data/adb/Box-Brain/nodebug"
+    rm -rf "/data/adb/Box-Brain/tag"
+    exit 1
+fi
+
+MODPATH="/data/adb/modules/playintegrity"
+. $MODPATH/common_func.sh
+
+# SELinux spoofing
+if [ -f /data/adb/Box-Brain/selinux ]; then
+    if command -v setenforce >/dev/null 2>&1; then
+        current=$(getenforce)
+        if [ "$current" != "Enforcing" ]; then
+            setenforce 1
+            log "SELINUX Spoofed successfully"
+        fi
+    fi
+fi
+
+# Module path and file references
+LOG_DIR="/data/adb/Box-Brain/Integrity-Box-Logs"
+PROP="/data/adb/modules/playintegrity/system.prop"
+
+# Module install path
+export MODPATH="/data/adb/modules/playintegrity"
+
+NO_LINEAGE_FLAG="/data/adb/Box-Brain/NoLineageProp"
+NODEBUG_FLAG="/data/adb/Box-Brain/nodebug"
+TAG_FLAG="/data/adb/Box-Brain/tag"
+
+TMP_PROP="$MODPATH/tmp.prop"
+SYSTEM_PROP="$MODPATH/system.prop"
+> "$TMP_PROP" # clear old temp file
+
+# Build summary of active flags
+FLAGS_ACTIVE=""
+[ -f "$NO_LINEAGE_FLAG" ] && FLAGS_ACTIVE="$FLAGS_ACTIVE NoLineageProp"
+[ -f "$NODEBUG_FLAG" ] && FLAGS_ACTIVE="$FLAGS_ACTIVE nodebug"
+[ -f "$TAG_FLAG" ] && FLAGS_ACTIVE="$FLAGS_ACTIVE tag"
+
+if [ -n "$FLAGS_ACTIVE" ]; then
+    log "Prop sanitization flags active: $FLAGS_ACTIVE"
+    log "Preparing temporary prop file..."
+    getprop | grep "userdebug" >> "$TMP_PROP"
+    getprop | grep "test-keys" >> "$TMP_PROP"
+    getprop | grep "lineage_" >> "$TMP_PROP"
+
+    # Basic cleanup
+    sed -i 's///g' "$TMP_PROP"
+    sed -i 's/: /=/g' "$TMP_PROP"
+else
+    log "No prop sanitization flags found. Skipping."
+fi
+
+# LineageOS cleanup
+if [ -f "$NO_LINEAGE_FLAG" ]; then
+    log "NoLineageProp flag detected. Deleting LineageOS props..."
+    for prop in \
+        ro.lineage.build.version \
+        ro.lineage.build.version.plat.rev \
+        ro.lineage.build.version.plat.sdk \
+        ro.lineage.device \
+        ro.lineage.display.version \
+        ro.lineage.releasetype \
+        ro.lineage.version \
+        ro.lineagelegal.url; do
+        resetprop --delete "$prop"
+    done
+    sed -i 's/lineage_//g' "$TMP_PROP"
+    log "LineageOS props sanitized."
+fi
+
+# userdebug to user
+if [ -f "$NODEBUG_FLAG" ]; then
+    if grep -q "userdebug" "$TMP_PROP"; then
+        sed -i 's/userdebug/user/g' "$TMP_PROP"
+    fi
+    log "userdebug to user sanitization applied."
+fi
+
+# test-keys to release-keys
+if [ -f "$TAG_FLAG" ]; then
+    if grep -q "test-keys" "$TMP_PROP"; then
+        sed -i 's/test-keys/release-keys/g' "$TMP_PROP"
+    fi
+    log "test-keys to release-keys sanitization applied."
+fi
+
+# Finalize system.prop
+if [ -s "$TMP_PROP" ]; then
+    log "Sorting and creating final system.prop..."
+    sort -u "$TMP_PROP" > "$SYSTEM_PROP"
+    rm -f "$TMP_PROP"
+    log "system.prop created at $SYSTEM_PROP."
+
+    log "Waiting 30 seconds before applying props..."
+    sleep 30
+
+    log "Applying props via resetprop..."
+    resetprop -n --file "$SYSTEM_PROP"
+    log "Prop sanitization applied from system.prop"
+fi
+
+# Explicit fingerprint sanitization
+if [ -f "$NODEBUG_FLAG" ] || [ -f "$TAG_FLAG" ]; then
+    fp=$(getprop ro.build.fingerprint)
+    fp_clean="$fp"
+
+    [ -f "$NODEBUG_FLAG" ] && fp_clean=${fp_clean/userdebug/user}
+    [ -f "$TAG_FLAG" ] && {
+        fp_clean=${fp_clean/test-keys/release-keys}
+        fp_clean=${fp_clean/dev-keys/release-keys}
+    }
+
+    if [ "$fp" != "$fp_clean" ]; then
+        resetprop ro.build.fingerprint "$fp_clean"
+        [ -f "$NODEBUG_FLAG" ] && resetprop ro.build.type "user"
+        [ -f "$TAG_FLAG" ] && resetprop ro.build.tags "release-keys"
+        log "Fingerprint sanitized to $fp_clean"
+    else
+        log "Fingerprint already clean. No changes applied."
+    fi
+fi
+EOF
+fi
+
+chmod 777 "$boot/lineage.sh"
+
 if [ ! -f "$boot/hash.sh" ]; then
   cat <<'EOF' > "$boot/hash.sh"
 #!/system/bin/sh
@@ -209,8 +362,6 @@ EOF
 fi
 
 chmod 777 "$boot/hash.sh"
-chmod 777 "$toolbox/meow.py"
-chmod 777 "$toolbox/run-python"
 
 if [ ! -f "$boot/prop.sh" ]; then
   cat <<'EOF' > "$boot/prop.sh"
