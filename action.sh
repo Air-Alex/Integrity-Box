@@ -13,7 +13,9 @@ URL="https://raw.githubusercontent.com/MeowDump/Integrity-Box/refs/heads/main/DU
 BAK="$PROP.bak"
 FLAG="/data/adb/Box-Brain/advanced"
 FINGERPRINT="$PIF/custom.pif.json"
+FORK="/data/adb/modules_update/playintegrityfix"
 P="/data/adb/modules/playintegrityfix/custom.pif.prop"
+BADMOSI="/data/adb/modules_update/playintegrity/toolbox/custom.pif.prop"
 PATCH_DATE="2025-10-05"
 TARGET_DIR="/data/adb/tricky_store"
 FILE_PATH="$TARGET_DIR/security_patch.txt"
@@ -24,6 +26,66 @@ CPP="/data/adb/Box-Brain/Integrity-Box-Logs/spoofing.log"
 PATCH_LOG="/data/adb/Box-Brain/Integrity-Box-Logs/patch.log"
 LOG="/data/adb/Box-Brain/Integrity-Box-Logs/root.log"
 LOGFILE="/data/adb/Box-Brain/Integrity-Box-Logs/gapps.log"
+LOGZ="/data/adb/Box-Brain/Integrity-Box-Logs/integrity_downloader.log"
+URL_PIF="https://github.com/osm0sis/PlayIntegrityFork/releases/download/v15/PlayIntegrityFork-v15.zip"
+SUM_PIF="ecb0542d04bd4a1dbedd1398651dced86d90a87f4e817125753665a24297124e"
+URL_ZN="https://github.com/Dr-TSNG/ZygiskNext/releases/download/v1.3.1/Zygisk-Next-1.3.1-665-7e5b533-release.zip"
+SUM_ZN="7ab5f6bb06c60c960f62fdbf2312e56b094ee91e44105a734a57c763c274b5c3"
+URL_TS="https://github.com/5ec1cff/TrickyStore/releases/download/1.4.1/Tricky-Store-v1.4.1-245-72b2e84-release.zip"
+SUM_TS="2f5e73fcba0e4e43b6e96b38f333cbe394873e3a81cf8fe1b831c2fbd6c46ea9"
+URL_IB="https://github.com/MeowDump/Integrity-Box/releases/download/v26/v26-Integrity-Box-16-11-2025.zip"
+SUM_IB="a084af2d95fbf8a67800ff2303e6317272bac1605515b7f0984bde517d6c9f0c"
+PIPE="$RECORD/integrity_downloader.pipe"
+OUT="/storage/emulated/0/Download/IntegrityModules"
+WIDTH=55
+
+if [ -f /data/adb/Box-Brain/download ]; then
+
+    rm -f "$LOGZ" "$PIPE"
+    mkdir -p "$OUT"
+
+    if command -v mkfifo >/dev/null 2>&1; then
+        mkfifo "$PIPE"
+        tee -a "$LOGZ" < "$PIPE" &
+        exec 1> "$PIPE" 2>&1
+    else
+        exec >> "$LOGZ" 2>&1
+    fi
+
+    banner
+    printf "Module                  Size         Status\n"
+    printf "%${WIDTH}s\n" | tr ' ' '-'
+
+    download "$URL_PIF" "PlayIntegrityFork.zip" "$SUM_PIF"
+    [ -f "$OUT/PlayIntegrityFork.zip" ] &&
+        print_row "PlayIntegrityFork" "$(get_size "$OUT/PlayIntegrityFork.zip")" "Verified" ||
+        print_row "PlayIntegrityFork" "-" "Failed"
+
+    download "$URL_ZN" "ZygiskNext.zip" "$SUM_ZN"
+    [ -f "$OUT/ZygiskNext.zip" ] &&
+        print_row "ZygiskNext" "$(get_size "$OUT/ZygiskNext.zip")" "Verified" ||
+        print_row "ZygiskNext" "-" "Failed"
+
+    download "$URL_TS" "TrickyStore.zip" "$SUM_TS"
+    [ -f "$OUT/TrickyStore.zip" ] &&
+        print_row "TrickyStore" "$(get_size "$OUT/TrickyStore.zip")" "Verified" ||
+        print_row "TrickyStore" "-" "Failed"
+
+    download "$URL_IB" "IntegrityBox.zip" "$SUM_IB"
+    [ -f "$OUT/IntegrityBox.zip" ] &&
+        print_row "IntegrityBox" "$(get_size "$OUT/IntegrityBox.zip")" "Verified" ||
+        print_row "IntegrityBox" "-" "Failed"
+
+    printf "%${WIDTH}s\n" | tr ' ' '='
+    center "DONE"
+    printf "%${WIDTH}s\n" | tr ' ' '='
+
+    rm -rf "/data/adb/Box-Brain/download"
+    echo 
+    echo "Saved to $OUT"
+    handle_delay
+    exit 0
+fi
 
 if [ -f "/data/adb/Box-Brain/root" ]; then
   rm -f "/data/adb/Box-Brain/root"
@@ -31,6 +93,7 @@ if [ -f "/data/adb/Box-Brain/root" ]; then
     echo "$(date '+%F %T') Deleted: $f" | tee -a "$LOG"
     rm -f "$f"
   done
+  handle_delay
   exit 0
 fi
 
@@ -84,6 +147,7 @@ if [ -f "/data/adb/Box-Brain/gapps" ]; then
   echo "" | tee -a "$LOGFILE"
   echo "Cleanup complete." | tee -a "$LOGFILE"
   echo "====================================" | tee -a "$LOGFILE"
+  handle_delay
   exit 0
 fi
 
@@ -101,6 +165,7 @@ if [ -f "/data/adb/Box-Brain/override" ]; then
   
   "
   sh "$SCRIPT_DIR/override_lineage.sh"
+  handle_delay
   exit 0
 fi
 
@@ -337,6 +402,10 @@ for proc in com.google.android.gms.unstable com.google.android.gms com.android.v
 done
 
 log_step "REVIVED" "Droidguard Processes"
+
+if [ -f "$FORK/app_replace_list.txt" ]; then
+  cp "$BADMOSI" "$FORK"
+fi
 
 echo "--------------------------------------------"
 echo " "
