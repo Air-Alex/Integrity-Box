@@ -13,21 +13,79 @@ URL="https://raw.githubusercontent.com/MeowDump/Integrity-Box/refs/heads/main/DU
 BAK="$PROP.bak"
 FLAG="/data/adb/Box-Brain/advanced"
 FINGERPRINT="$PIF/custom.pif.json"
-CPP="/data/adb/Box-Brain/Integrity-Box-Logs/spoofing.log"
 P="/data/adb/modules/playintegrityfix/custom.pif.prop"
 PATCH_DATE="2025-10-05"
-PATCH_LOG="/data/adb/Box-Brain/Integrity-Box-Logs/patch.log"
 TARGET_DIR="/data/adb/tricky_store"
 FILE_PATH="$TARGET_DIR/security_patch.txt"
 PATCH_FLAG="/data/adb/Box-Brain/patch"
 PROP_MAIN="ro.build.version.security_patch"
+DIR="/sdcard/Download"
+CPP="/data/adb/Box-Brain/Integrity-Box-Logs/spoofing.log"
+PATCH_LOG="/data/adb/Box-Brain/Integrity-Box-Logs/patch.log"
+LOG="/data/adb/Box-Brain/Integrity-Box-Logs/root.log"
+LOGFILE="/data/adb/Box-Brain/Integrity-Box-Logs/gapps.log"
 
-#if [ -f "/data/adb/Box-Brain/keybox" ]; then
-#  cd "/data/adb/modules/playintegrity"
-#  /data/adb/python/run-python "keybox.py" /data/adb/tricky_store/keybox.xml
-#  rm -rf "data/adb/Box-Brain/keybox"
-#  exit 0
-#fi
+if [ -f "/data/adb/Box-Brain/root" ]; then
+  rm -f "/data/adb/Box-Brain/root"
+  find "$DIR" -type f \( -name "*_install_log_2025*" -o -name "*_action_log_2025*" \) | while read -r f; do
+    echo "$(date '+%F %T') Deleted: $f" | tee -a "$LOG"
+    rm -f "$f"
+  done
+  exit 0
+fi
+
+if [ -f "/data/adb/Box-Brain/gapps" ]; then
+  rm -f "/data/adb/Box-Brain/gapps"
+  echo "====================================" | tee -a "$LOGFILE"
+  echo "Starting Log Cleanup" | tee -a "$LOGFILE"
+  echo "====================================" | tee -a "$LOGFILE"
+  echo "" | tee -a "$LOGFILE"
+
+  TARGETS="
+/sdcard/Android/litegapps/litegapps_controller.log
+/tmp/NikGapps
+/tmp/NikGapps/logfiles
+/tmp/NikGapps/addonscripts
+/tmp/NikGapps/logfiles/package_log
+/sdcard/NikGapps
+/tmp/recovery.log
+/tmp/NikGapps.log
+/tmp/Mount.log
+/tmp/installation_size.log
+/tmp/busybox.log
+/tmp/Logs-*.tar.gz
+/tmp/bitgapps_debug_logs_*.tar.gz
+/sdcard/bitgapps_debug_logs_*.tar.gz
+/system/etc/bitgapps_debug_logs_*.tar.gz
+/sdcard/Download/*_install_log_2025*
+/sdcard/Download/*_action_log_2025*
+"
+
+  for path in $TARGETS; do
+    if echo "$path" | grep -q '\*'; then
+      files=$(find "$(dirname "$path")" -type f -name "$(basename "$path")" 2>/dev/null)
+    else
+      files=$(find "$path" -type f 2>/dev/null)
+    fi
+
+    if [ -n "$files" ]; then
+      echo "Found: $path" | tee -a "$LOGFILE"
+      echo "$files" | tee -a "$LOGFILE"
+      echo "$files" | while read -r f; do
+        echo "Deleting: $f" | tee -a "$LOGFILE"
+        rm -rf "$f" 2>&1 | tee -a "$LOGFILE"
+      done
+    elif [ -d "$path" ]; then
+      echo "Deleting directory: $path" | tee -a "$LOGFILE"
+      rm -rf "$path" 2>&1 | tee -a "$LOGFILE"
+    fi
+  done
+
+  echo "" | tee -a "$LOGFILE"
+  echo "Cleanup complete." | tee -a "$LOGFILE"
+  echo "====================================" | tee -a "$LOGFILE"
+  exit 0
+fi
 
 # Force override lineage props
 if [ -f "/data/adb/Box-Brain/override" ]; then
@@ -123,7 +181,7 @@ else
 
   # Base packages
   for pkg in com.android.vending com.google.android.gms com.reveny.nativecheck \
-             io.github.vvb2060.keyattestation io.github.qwq233.keyattestation \
+             io.github.vvb2060.keyattestation com.google.android.gsf io.github.qwq233.keyattestation \
              io.github.vvb2060.mahoshojo icu.nullptr.nativetest \
              com.google.android.contactkeys com.google.android.ims com.google.android.safetycore; do
     echo "$pkg" >> "$TMP"
