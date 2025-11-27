@@ -26,6 +26,36 @@ lineage() {
 #    echo "$(date '+%Y-%m-%d %H:%M:%S') $*"
 }
 
+chup() {
+echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_DIR/pixel.log"
+}
+
+set_resetprop() {
+    PROP="$1"
+    VALUE="$2"
+    CURRENT=$(su -c getprop "$PROP")
+    
+    if [ -n "$CURRENT" ]; then
+        su -c resetprop -n -p "$PROP" "$VALUE" > /dev/null 2>&1
+        chup "Reset $PROP to $VALUE"
+    else
+        chup "Skipping $PROP, property does not exist"
+    fi
+}
+
+set_simpleprop() {
+    PROP="$1"
+    VALUE="$2"
+    CURRENT=$(su -c getprop "$PROP")
+    
+    if [ -n "$CURRENT" ]; then
+        su -c setprop "$PROP" "$VALUE" > /dev/null 2>&1
+        chup "Set $PROP to $VALUE"
+    else
+        chup "Skipping $PROP, property does not exist"
+    fi
+}
+
 # Helper to add packages
 add_pkg() {
   pkg="$1"
@@ -255,11 +285,11 @@ check_and_set_prop() {
     fi
 }
 
-#######################################################
+##########################################
 # adapted from Play Integrity Fork by @osm0sis
 # source: https://github.com/osm0sis/PlayIntegrityFork
 # license: GPL-3.0
-#######################################################
+##########################################
 
 SKIPDELPROP=false
 [ -f "$MODPATH/skipdelprop" ] && SKIPDELPROP=true
