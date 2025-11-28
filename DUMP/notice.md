@@ -1,1 +1,1 @@
-🟢🟢🔴 A toolkit for managing Play Integrity & System Environment
+🟢🟢🟢 A toolkit for managing Play Integrity & System Environment
