@@ -1,1 +1,1 @@
-🟢🟢🟢 A toolkit for managing Play Integrity & System Environment
+🟢🟢🔴 Keybox is soft banned dude, you'll be passing DEVICE INTEGRITY for now
