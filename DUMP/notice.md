@@ -1,1 +1,1 @@
-🟢🟢🔴 Keybox is soft banned dude, you'll be passing DEVICE INTEGRITY for now
+🔴🔴🔴 all keyboxs are BANNED bro, open WebUI, go to PIF settings, enable" SPOOF TO A12" toggle. | Playstore will crash but your apps will work
