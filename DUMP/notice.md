@@ -1,1 +1,1 @@
-🟢🟢🔴 DEVICE INTEGRITY | keybox is soft banned
+🟢🟢🟢 STRONG INTEGRITY | 🗓️ 27/12/2025
